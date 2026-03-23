@@ -555,7 +555,7 @@ function myTaskCard(t){
       </div>
     </div>
     ${t.desc?`<div class="mtc-desc">${esc(t.desc)}</div>`:''}
-    ${t.revisionComment?`<div style="background:var(--amb-l);border:1px solid rgba(184,134,11,.2);border-radius:var(--rad);padding:10px 13px;margin-bottom:12px;font-size:13px;line-height:1.6"><span style="font-size:11px;font-weight:700;color:var(--amb);display:block;margin-bottom:4px">↩ REVISION COMMENT — ${esc(t.revisionBy||'Partner')}</span>${esc(t.revisionComment)}</div>`:''}
+    ${t.comments&&t.comments.length?`<div style="margin-bottom:14px">${t.comments.map(c=>`<div style="background:var(--amb-l);border:1px solid rgba(184,134,11,.2);border-left:3px solid var(--amb);border-radius:0 var(--rad) var(--rad) 0;padding:9px 13px;margin-bottom:6px;font-size:13px;line-height:1.55"><span style="font-size:11px;font-weight:700;color:var(--amb);display:block;margin-bottom:3px">💬 ${esc(c.by)} · ${c.at}</span>${esc(c.text)}</div>`).join('')}</div>`:''}
     <div class="row" style="flex-wrap:wrap;gap:8px">
       ${t.due?`<span class="task-due${isOv?' ov':''}">📅 Due: ${fmtD(t.due)}${t.time?' '+t.time:''}</span>`:''}
       ${t.status!=='Done'?`
@@ -613,7 +613,11 @@ async function renderTracker(){
           const isOv=t.due&&t.status!=='Done'&&t.status!=='Verified'&&new Date(t.due+'T23:59:59')<new Date();
           const effSta=isOv&&t.status!=='Done'&&t.status!=='Verified'?'Overdue':t.status;
           return`<tr>
-            <td><div style="font-weight:600;color:var(--navy)">${esc(t.title)}</div>${t.desc?`<div class="mu" style="font-size:11px;margin-top:2px">${esc(t.desc.slice(0,50))}${t.desc.length>50?'...':''}</div>`:''} ${t.revisionComment?`<div style="font-size:11px;color:var(--amb);margin-top:3px">↩ ${esc(t.revisionComment.slice(0,50))}${t.revisionComment.length>50?'...':''}</div>`:''}</td>
+            <td style="min-width:180px">
+              <div style="font-weight:600;color:var(--navy)">${esc(t.title)}</div>
+              ${t.desc?`<div class="mu" style="font-size:11px;margin-top:2px">${esc(t.desc.slice(0,50))}${t.desc.length>50?'...':''}</div>`:''}
+              ${t.comments&&t.comments.length?`<div style="margin-top:5px">${t.comments.slice(-2).map(c=>`<div style="font-size:11px;background:var(--amb-l);border-left:2px solid var(--amb);padding:3px 7px;border-radius:0 4px 4px 0;margin-top:3px;color:var(--tx)"><span style="font-weight:700;color:var(--amb)">${esc(c.by)}: </span>${esc(c.text.slice(0,60))}${c.text.length>60?'...':''}</div>`).join('')}</div>`:''}
+            </td>
             <td><div class="row" style="gap:7px"><div class="av">${ini(t.assignedToName)}</div><span style="font-weight:500">${esc(t.assignedToName)}</span></div></td>
             <td style="font-family:'DM Mono',monospace;font-size:12px;${isOv?'color:var(--red);font-weight:600':''}">${t.due||'—'}${t.time?' '+t.time:''}</td>
             <td><span class="pri ${priCls[t.priority]||'pri-m'}">${t.priority}</span></td>
@@ -621,9 +625,9 @@ async function renderTracker(){
             <td class="mu" style="font-size:11px;font-family:'DM Mono',monospace">${fmtDT(t.createdAt)}</td>
             <td>
               <div class="row" style="gap:5px;flex-wrap:wrap">
-                ${effSta==='Done'&&t.status!=='Verified'?`<button class="btn btn-sm" style="background:var(--gold-l);color:var(--gold);border-color:var(--gold-t);font-weight:600" onclick="window.verifyTask('${t.id}')">✓ Verify</button>`:''}
-                ${effSta==='Done'&&t.status!=='Verified'?`<button class="btn btn-sm" style="color:var(--amb);border-color:rgba(184,134,11,.25)" onclick="openCommentModal('${t.id}',${JSON.stringify(t.title)})">↩ Revise</button>`:''}
-                ${t.status==='Verified'?`<span style="font-size:11px;color:var(--grn);font-weight:600">✓ Verified</span>`:''}
+                ${t.status==='Done'&&effSta!=='Verified'?`<button class="btn btn-sm" style="background:var(--gold-l);color:var(--gold);border-color:var(--gold-t);font-weight:600" onclick="window.verifyTask('${t.id}')">✓ Verify</button>`:''}
+                ${(t.status==='Done'||t.status==='In Progress')&&t.status!=='Verified'?`<button class="btn btn-sm" style="color:var(--amb);border-color:rgba(184,134,11,.3);font-weight:500" onclick="window.openCommentModal('${t.id}',${JSON.stringify(t.title)})">💬 Comment</button>`:''}
+                ${t.status==='Verified'?`<span style="font-size:11px;color:var(--grn);font-weight:700">✓ Verified</span>`:''}
                 <button class="btn btn-sm btn-r" onclick="window.delTask('${t.id}')">Delete</button>
               </div>
             </td>
@@ -797,12 +801,25 @@ window.saveNewPin=async function(){
 
 // ── COMMENT / REVISION MODAL ──
 let revisionTaskId = null;
-function openCommentModal(tid, taskTitle){
+window.openCommentModal = async function(tid, taskTitle){
   revisionTaskId = tid;
   $('cm-task-title').textContent = taskTitle;
   $('cm-comment').value = '';
+  if($('cm-revert')) $('cm-revert').checked = false;
+  // Load existing comments
+  const snap = await getDoc(doc(db,'kra_tasks',tid));
+  const comments = snap.exists() ? (snap.data().comments||[]) : [];
+  const prevEl = $('cm-prev-comments');
+  if(prevEl){
+    if(comments.length){
+      prevEl.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Previous comments (${comments.length})</div>`
+        + comments.map(c=>`<div style="background:var(--surf2);border:1px solid var(--bdr);border-left:3px solid var(--gold);border-radius:0 var(--rad) var(--rad) 0;padding:8px 11px;margin-bottom:6px;font-size:12px"><div style="font-weight:700;color:var(--navy);margin-bottom:2px">${esc(c.by)} <span style="font-weight:400;color:var(--mu);font-size:11px">· ${c.at}</span></div><div style="color:var(--tx);line-height:1.5">${esc(c.text)}</div></div>`).join('');
+    } else {
+      prevEl.innerHTML = '';
+    }
+  }
   $('comment-modal').classList.add('on');
-  setTimeout(()=>$('cm-comment').focus(), 100);
+  setTimeout(()=>$('cm-comment').focus(), 200);
 }
 window.closeCommentModal = function(){
   $('comment-modal').classList.remove('on');
@@ -812,12 +829,24 @@ window.submitRevision = async function(){
   const comment = $('cm-comment')?.value.trim();
   if(!comment){ $('cm-comment').style.borderColor='var(--red)'; return; }
   $('cm-comment').style.borderColor='';
-  await setDoc(doc(db,'kra_tasks',revisionTaskId),{
-    status:'In Progress',
-    revisionComment: comment,
-    revisionBy: sess.name,
-    revisionAt: new Date().toISOString()
-  },{merge:true});
+  // Get existing comments
+  const taskSnap = await getDoc(doc(db,'kra_tasks',revisionTaskId));
+  const existing = taskSnap.exists() ? (taskSnap.data().comments||[]) : [];
+  const newComment = {
+    text: comment,
+    by: sess.name,
+    at: new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+  };
+  // Only change status if checkbox is checked
+  const revert = $('cm-revert')?.checked;
+  const update = {
+    comments: [...existing, newComment],
+    latestComment: comment,
+    latestCommentBy: sess.name,
+    latestCommentAt: new Date().toISOString()
+  };
+  if(revert) update.status = 'In Progress';
+  await setDoc(doc(db,'kra_tasks',revisionTaskId), update, {merge:true});
   closeCommentModal();
   renderTracker();
 };
@@ -836,13 +865,18 @@ boot();
       <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.15)" onclick="closeCommentModal()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="col mb16">
-        <label class="fl">Comment / Reason for revision *</label>
-        <textarea class="inp" id="cm-comment" rows="4" placeholder="e.g. Please re-check the calculation on page 3. The total doesn't match..." style="line-height:1.6"></textarea>
+      <div class="col mb14">
+        <label class="fl">Comment *</label>
+        <textarea class="inp" id="cm-comment" rows="4" placeholder="e.g. Please re-check the GST calculation. The total doesn't match the invoice..." style="line-height:1.6"></textarea>
       </div>
-      <div style="background:var(--amb-l);border:1px solid rgba(184,134,11,.2);border-radius:var(--rad);padding:10px 13px;font-size:12px;color:var(--amb)">
-        This will change the task status back to <strong>In Progress</strong> and the member will see your comment.
-      </div>
+      <div id="cm-prev-comments" style="margin-bottom:14px"></div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--surf2);padding:10px 13px;border-radius:var(--rad);border:1px solid var(--bdr);font-size:13px">
+        <input type="checkbox" id="cm-revert" style="width:16px;height:16px;accent-color:var(--amb)">
+        <div>
+          <div style="font-weight:600;color:var(--tx)">Also change status back to In Progress</div>
+          <div style="font-size:11px;color:var(--mu);margin-top:2px">Member will see comment + status reverted</div>
+        </div>
+      </label>
     </div>
     <div class="modal-foot">
       <button class="btn" onclick="closeCommentModal()">Cancel</button>

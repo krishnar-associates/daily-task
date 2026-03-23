@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Krishna R & Associates – Task Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e0e0c;--surf:#161614;--surf2:#1e1e1b;--surf3:#262622;
+  --bdr:rgba(255,255,255,.07);--bdrm:rgba(255,255,255,.13);
+  --tx:#f0ede6;--mu:#7a7870;--hi:#4a4845;
+  --gold:#c9a84c;--gold-d:#a8863a;--gold-l:rgba(201,168,76,.1);--gold-t:rgba(201,168,76,.22);
+  --red:#e05c5c;--red-l:rgba(224,92,92,.1);
+  --grn:#4caf87;--grn-l:rgba(76,175,135,.1);
+  --blue:#5b8dee;--blue-l:rgba(91,141,238,.1);
+  --amb:#e0a84c;--amb-l:rgba(224,168,76,.1);
+  --rad:8px;--radl:12px;
+  --sh:0 2px 12px rgba(0,0,0,.5);--shm:0 8px 40px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh}
+input,select,button,textarea{font-family:'DM Sans',sans-serif}
+.hide{display:none!important}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;gap:5px}
+.f1{flex:1;min-width:0}
+.mu{color:var(--mu)}.sz12{font-size:12px}.sz11{font-size:11px}
+.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}
+.mb20{margin-bottom:20px}.mt8{margin-top:8px}.mt12{margin-top:12px}
+.empty{text-align:center;padding:36px 16px;color:var(--mu);font-size:13px;line-height:1.8}
+
+/* LOADER */
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s}
+#loader.off{opacity:0;pointer-events:none}
+.spin{width:26px;height:26px;border:2.5px solid var(--bdr);border-top-color:var(--gold);border-radius:50%;animation:spin .9s linear infinite;margin-top:18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* LOGIN */
+#login{display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+#login.on{display:flex}
+.login-outer{width:100%;max-width:400px}
+.login-brand{text-align:center;margin-bottom:28px}
+.login-brand img{width:200px;filter:invert(1);opacity:.9;margin-bottom:14px}
+.login-brand-sub{font-size:12px;color:var(--mu);letter-spacing:.5px;text-transform:uppercase}
+.login-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radl);padding:28px;box-shadow:var(--shm)}
+.login-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--mu);margin-bottom:22px}
+.ltabs{display:flex;border:1px solid var(--bdr);border-radius:var(--rad);overflow:hidden;margin-bottom:20px}
+.ltab{flex:1;padding:8px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--mu);transition:all .15s}
+.ltab.on{background:var(--gold);color:#000;font-weight:600}
+
+/* FORMS */
+.fl{display:block;font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.inp{width:100%;padding:9px 12px;border:1px solid var(--bdr);border-radius:var(--rad);background:var(--surf2);color:var(--tx);font-size:13px;transition:border-color .15s}
+.inp:focus{outline:none;border-color:var(--gold);background:var(--surf3)}
+.sel{padding:9px 11px;border:1px solid var(--bdr);border-radius:var(--rad);background:var(--surf2);color:var(--tx);font-size:13px;width:100%}
+.sel:focus{outline:none;border-color:var(--gold)}
+textarea.inp{resize:vertical;min-height:72px;line-height:1.5}
+.btn{padding:8px 16px;border:1px solid var(--bdrm);border-radius:var(--rad);background:none;font-size:13px;font-weight:500;cursor:pointer;color:var(--tx);transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--surf3)}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-gold{background:var(--gold);color:#000;border-color:var(--gold);font-weight:600}.btn-gold:hover{background:var(--gold-d)}
+.btn-full{width:100%;padding:11px;font-size:14px}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-r{color:var(--red);border-color:rgba(224,92,92,.25)}.btn-r:hover{background:var(--red-l)}
+.err{background:var(--red-l);border:1px solid rgba(224,92,92,.25);border-radius:var(--rad);padding:8px 12px;font-size:12px;color:var(--red);margin-bottom:12px;display:none}
+.err.on{display:block}
+.ok{background:var(--grn-l);border:1px solid rgba(76,175,135,.25);border-radius:var(--rad);padding:8px 12px;font-size:12px;color:var(--grn);display:none}
+.ok.on{display:block}
+
+/* APP SHELL */
+#app{display:none;min-height:100vh}
+#app.on{display:block}
+.topbar{height:54px;background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:100;box-shadow:0 1px 0 var(--bdr)}
+.topbar-logo img{height:28px;filter:invert(1);opacity:.85}
+.user-pill{background:var(--surf2);border:1px solid var(--bdr);border-radius:20px;padding:4px 12px 4px 7px;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500}
+.av{width:24px;height:24px;border-radius:50%;background:var(--gold-l);border:1px solid var(--gold-t);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);flex-shrink:0}
+.av-lg{width:36px;height:36px;font-size:12px}
+.role-badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;background:var(--gold-l);color:var(--gold);border:1px solid var(--gold-t)}
+.tabs-nav{background:var(--surf);border-bottom:1px solid var(--bdr);display:flex;overflow-x:auto;padding:0 16px}
+.tnav{padding:13px 16px;font-size:13px;font-weight:500;border:none;background:none;color:var(--mu);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;margin-bottom:-1px;transition:all .15s;letter-spacing:.1px}
+.tnav.on{color:var(--gold);border-bottom-color:var(--gold)}
+.page{display:none;padding:22px 20px;max-width:1100px;margin:0 auto}
+.page.on{display:block}
+
+/* CARDS */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radl);padding:20px 22px;box-shadow:var(--sh)}
+.stat{background:var(--surf2);border-radius:var(--rad);padding:13px 15px;border:1px solid var(--bdr)}
+.stat-l{font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-v{font-size:24px;font-weight:600}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin-bottom:22px}
+
+/* PRIORITY & STATUS */
+.pri{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.pri-h{background:rgba(224,92,92,.15);color:#f08080}
+.pri-m{background:var(--amb-l);color:var(--amb)}
+.pri-l{background:var(--grn-l);color:var(--grn)}
+.sta{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.sta-p{background:var(--blue-l);color:var(--blue)}
+.sta-ip{background:var(--amb-l);color:var(--amb)}
+.sta-d{background:var(--grn-l);color:var(--grn)}
+.sta-o{background:var(--red-l);color:var(--red)}
+
+/* TASK CARDS */
+.task-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--rad);padding:16px 18px;margin-bottom:8px;box-shadow:var(--sh);transition:border-color .15s}
+.task-card:hover{border-color:var(--bdrm)}
+.task-card.done-card{opacity:.5}
+.task-title-txt{font-size:14px;font-weight:600;margin-bottom:4px;line-height:1.4}
+.task-desc-txt{font-size:12px;color:var(--mu);margin-bottom:10px;line-height:1.55}
+.task-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.task-due{font-size:11px;color:var(--mu);font-family:'DM Mono',monospace}
+.task-due.ov{color:var(--red)}
+.divider{height:1px;background:var(--bdr);margin:14px 0}
+
+/* PERSON GRID */
+.person-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.pb{background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--rad);padding:12px 10px;cursor:pointer;text-align:center;transition:all .15s}
+.pb:hover{border-color:var(--gold-t)}
+.pb.sel{border-color:var(--gold);background:var(--gold-l)}
+.pb .pav{width:38px;height:38px;border-radius:50%;background:var(--surf3);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--mu);margin:0 auto 7px;transition:all .15s}
+.pb.sel .pav{background:var(--gold);color:#000;border-color:var(--gold)}
+.pb .pnm{font-size:12px;font-weight:600;color:var(--tx)}
+.pb .prl{font-size:10px;color:var(--mu);margin-top:2px}
+
+/* COUNTDOWN MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;align-items:center;justify-content:center;padding:20px}
+.modal-bg.on{display:flex}
+.modal{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radl);width:100%;max-width:500px;box-shadow:var(--shm)}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.modal-body{padding:22px}
+.modal-foot{padding:16px 22px;border-top:1px solid var(--bdr);display:flex;gap:8px;justify-content:flex-end}
+.cnt-ring-wrap{width:88px;height:88px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;position:relative}
+.cnt-ring-wrap svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.cnt-num{font-size:30px;font-weight:700;color:var(--gold);position:relative;z-index:1;font-family:'DM Serif Display',serif}
+.wa-preview{background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--rad);padding:13px 15px;font-size:12px;color:var(--mu);font-family:'DM Mono',monospace;white-space:pre-wrap;max-height:150px;overflow-y:auto;line-height:1.65}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:var(--rad);border:1px solid var(--bdr)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--bdr);background:var(--surf2);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--bdr);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--surf2)}
+
+/* FILTER */
+.filter-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.fp{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--bdr);background:var(--surf2);color:var(--mu);transition:all .15s}
+.fp.on{background:var(--gold);color:#000;border-color:var(--gold);font-weight:600}
+
+/* EMPLOYEE TASK VIEW */
+.my-task-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radl);padding:18px 20px;margin-bottom:10px;box-shadow:var(--sh)}
+.mtc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.mtc-title{font-size:16px;font-weight:600;line-height:1.4}
+.mtc-from{font-size:12px;color:var(--mu);margin-top:2px}
+.mtc-desc{font-size:13px;color:var(--mu);line-height:1.6;margin-bottom:12px}
+.mtc-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+@media(max-width:640px){
+  .page{padding:14px}
+  .tnav{padding:11px 10px;font-size:12px}
+  .person-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAFqBGYDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//Z" style="width:180px;filter:invert(1);opacity:.85">
+  <div class="spin"></div>
+</div>
+
+<!-- LOGIN -->
+<div id="login">
+<div class="login-outer">
+  <div class="login-brand">
+    <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAFqBGYDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//Z" alt="Krishna R & Associates">
+    <div class="login-brand-sub">Internal Task Manager</div>
+  </div>
+  <div class="login-card">
+    <div class="login-title">Welcome back</div>
+    <div class="login-sub">Sign in to access your tasks</div>
+    <div class="ltabs mb20">
+      <button class="ltab on" id="lt-staff" onclick="switchLTab('staff')">Staff Login</button>
+      <button class="ltab" id="lt-admin" onclick="switchLTab('admin')">Admin</button>
+    </div>
+    <div id="lerr" class="err"></div>
+    <div id="lpane-staff">
+      <div class="col mb12"><label class="fl">Select your name</label>
+        <select class="sel" id="l-who"><option value="">-- Select name --</option></select>
+      </div>
+      <div class="col mb20"><label class="fl">Your PIN</label>
+        <input class="inp" id="l-pin" type="password" maxlength="6" placeholder="Enter your PIN" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-gold btn-full" id="l-btn" onclick="doLogin()">Sign In</button>
+    </div>
+    <div id="lpane-admin" class="hide">
+      <div class="col mb20"><label class="fl">Admin PIN</label>
+        <input class="inp" id="m-p" type="password" maxlength="8" placeholder="Admin PIN" onkeydown="if(event.key==='Enter')doAdminLogin()">
+      </div>
+      <button class="btn btn-gold btn-full" onclick="doAdminLogin()">Enter Admin Portal</button>
+    </div>
+    <p style="text-align:center;margin-top:14px;font-size:11px;color:var(--mu)">Having trouble? Contact the admin.</p>
+  </div>
+</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo"><img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAFqBGYDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//Z" alt="KR&A"></div>
+    <div class="row" style="gap:8px">
+      <div class="user-pill"><div class="av" id="top-av"></div><span id="top-nm"></span></div>
+      <span class="role-badge" id="top-role"></span>
+      <button class="btn btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+  <div id="tabs-nav" class="tabs-nav"></div>
+  <div id="pages"></div>
+</div>
+
+<!-- COUNTDOWN MODAL -->
+<div class="modal-bg" id="cnt-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div style="font-size:15px;font-weight:600" id="cnt-title">Sending via WhatsApp</div>
+        <div style="font-size:12px;color:var(--mu);margin-top:2px" id="cnt-to"></div>
+      </div>
+      <button class="btn btn-sm btn-r" onclick="cancelSend()">Cancel</button>
+    </div>
+    <div class="modal-body">
+      <div class="cnt-ring-wrap">
+        <svg width="88" height="88" viewBox="0 0 88 88">
+          <circle cx="44" cy="44" r="36" fill="none" stroke="#1e1e1b" stroke-width="6"/>
+          <circle id="cnt-ring" cx="44" cy="44" r="36" fill="none" stroke="#c9a84c" stroke-width="6"
+            stroke-dasharray="226.2" stroke-dashoffset="0" stroke-linecap="round"
+            style="transition:stroke-dashoffset 1s linear"/>
+        </svg>
+        <div class="cnt-num" id="cnt-num">3</div>
+      </div>
+      <p style="text-align:center;font-size:13px;color:var(--mu);margin-bottom:16px">WhatsApp will open automatically.<br>Press <strong style="color:var(--tx)">Send</strong> once it opens.</p>
+      <div class="wa-preview" id="cnt-preview"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="cancelSend()">Cancel & Don't Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- FB SETUP FALLBACK -->
+<div id="fb-setup" style="display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px;background:var(--bg)">
+  <div style="background:var(--surf);border:1px solid var(--bdr);border-radius:var(--radl);padding:32px;width:100%;max-width:500px;box-shadow:var(--shm)">
+    <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAFqBGYDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AIyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//Z" style="height:36px;filter:invert(1);opacity:.8;margin-bottom:20px">
+    <p style="color:var(--mu);font-size:13px;margin-bottom:20px">Enter your Firebase config to connect</p>
+    <div id="fb-err" class="err mb12"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="col"><label class="fl">API Key</label><input class="inp" id="fb-apiKey" placeholder="AIzaSy..."></div>
+      <div class="col"><label class="fl">Auth Domain</label><input class="inp" id="fb-authDomain"></div>
+      <div class="col"><label class="fl">Project ID</label><input class="inp" id="fb-projectId"></div>
+      <div class="col"><label class="fl">App ID</label><input class="inp" id="fb-appId"></div>
+    </div>
+    <button class="btn btn-gold btn-full" onclick="saveFbConfig()">Connect →</button>
+  </div>
+</div>
+
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import{getFirestore,doc,getDoc,setDoc,getDocs,collection,serverTimestamp,deleteDoc,query,where,orderBy}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const FB_KEY='kra_fb_v1',SESS_KEY='kra_sess_v1';
+let db=null,sess=null,allMembers=[],cntTimer=null,pendingWA=null;
+const $=id=>document.getElementById(id);
+const td=()=>new Date().toISOString().slice(0,10);
+const ini=n=>(n||'?').trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+const fmtT=()=>new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmtD=d=>d?new Date(d+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'}):'';
+const fmtDT=d=>d?new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+const priCls={High:'pri-h',Medium:'pri-m',Low:'pri-l'};
+const staCls={Pending:'sta-p','In Progress':'sta-ip',Done:'sta-d',Overdue:'sta-o'};
+
+function loader(on){$('loader').classList.toggle('off',!on);}
+
+// ── FIREBASE ──
+function getFbCfg(){try{return JSON.parse(localStorage.getItem(FB_KEY));}catch(e){return null;}}
+window.saveFbConfig=async function(){
+  const pid=$('fb-projectId').value.trim();
+  const cfg={apiKey:$('fb-apiKey').value.trim(),authDomain:$('fb-authDomain').value.trim(),projectId:pid,appId:$('fb-appId').value.trim(),storageBucket:pid+'.appspot.com',messagingSenderId:'000000000000'};
+  if(!cfg.apiKey||!cfg.projectId){const e=$('fb-err');e.textContent='Fill all fields';e.classList.add('on');return;}
+  try{await initFB(cfg);localStorage.setItem(FB_KEY,JSON.stringify(cfg));$('fb-setup').style.display='none';await prepLogin();}
+  catch(e){const er=$('fb-err');er.textContent='Failed: '+e.message;er.classList.add('on');}
+};
+
+async function initFB(cfg){
+  const app=initializeApp(cfg,'kra_app');
+  db=getFirestore(app);
+  const ref=doc(db,'kra_config','app');
+  const s=await getDoc(ref);
+  if(!s.exists())await setDoc(ref,{adminPin:'kra1234',createdAt:serverTimestamp()});
+}
+
+// ── BOOT ──
+async function boot(){
+  loader(true);
+  const HARD={
+    apiKey:'AIzaSyAQrIlE7_tKRJnVXVbIe8V1-MmXgwlhKLk',
+    authDomain:'ca-mentor-kwk.firebaseapp.com',
+    projectId:'ca-mentor-kwk',
+    appId:'1:333761871976:web:ce36604a54c3034b3d3bdd',
+    storageBucket:'ca-mentor-kwk.appspot.com',
+    messagingSenderId:'333761871976'
+  };
+  try{await initFB(HARD);}
+  catch(e){loader(false);$('fb-setup').style.display='flex';return;}
+  try{const r=sessionStorage.getItem(SESS_KEY);if(r)sess=JSON.parse(r);}catch(e){}
+  await loadMembers();
+  loader(false);
+  if(sess)showApp();
+  else prepLogin();
+}
+
+async function loadMembers(){
+  const snap=await getDocs(collection(db,'kra_members'));
+  allMembers=[];snap.forEach(d=>allMembers.push({...d.data(),id:d.id}));
+  allMembers.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+}
+
+function prepLogin(){
+  const sel=$('l-who');if(!sel)return;
+  sel.innerHTML='<option value="">-- Select your name --</option>';
+  allMembers.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.name+(m.role==='assigner'?' (Partner/Manager)':'');sel.appendChild(o);});
+  $('login').classList.add('on');
+}
+
+window.switchLTab=t=>{
+  $('lpane-staff').classList.toggle('hide',t!=='staff');
+  $('lpane-admin').classList.toggle('hide',t!=='admin');
+  $('lt-staff').classList.toggle('on',t==='staff');
+  $('lt-admin').classList.toggle('on',t==='admin');
+  $('lerr').classList.remove('on');
+};
+
+window.doLogin=async function(){
+  const mid=$('l-who').value,pin=$('l-pin').value.trim();
+  if(!mid){showLE('Select your name');return;}
+  if(!pin){showLE('Enter your PIN');return;}
+  const m=allMembers.find(x=>x.id===mid);
+  if(!m||m.pin!==pin){showLE('Incorrect PIN');return;}
+  sess={uid:m.id,name:m.name,role:m.role||'staff',canAssign:m.role==='assigner'||m.role==='admin'};
+  sessionStorage.setItem(SESS_KEY,JSON.stringify(sess));
+  $('login').classList.remove('on');showApp();
+};
+
+window.doAdminLogin=async function(){
+  const p=$('m-p').value.trim();if(!p)return;
+  try{
+    const s=await getDoc(doc(db,'kra_config','app'));
+    const ap=s.exists()?(s.data().adminPin||'kra1234'):'kra1234';
+    if(p!==ap){showLE('Wrong admin PIN');return;}
+    sess={uid:'admin',name:'Admin',role:'admin',canAssign:true};
+    sessionStorage.setItem(SESS_KEY,JSON.stringify(sess));
+    $('login').classList.remove('on');showApp();
+  }catch(e){showLE('Error: '+e.message);}
+};
+
+function showLE(m){const e=$('lerr');e.textContent=m;e.classList.add('on');}
+
+window.doLogout=function(){
+  sess=null;sessionStorage.removeItem(SESS_KEY);
+  $('app').classList.remove('on');$('tabs-nav').innerHTML='';$('pages').innerHTML='';
+  $('login').classList.add('on');$('l-pin').value='';$('m-p').value='';
+  $('lerr').classList.remove('on');
+};
+
+// ── APP SHELL ──
+function showApp(){
+  $('app').classList.add('on');
+  $('top-nm').textContent=sess.name;
+  $('top-av').textContent=ini(sess.name);
+  const roleLabel=sess.role==='admin'?'Admin':sess.role==='assigner'?'Partner / Manager':'Staff';
+  $('top-role').textContent=roleLabel;
+
+  // Tabs depend on role
+  const tabs=[];
+  if(sess.canAssign) tabs.push({id:'assign',label:'Assign Task'});
+  tabs.push({id:'mytasks',label:'My Tasks'});
+  if(sess.canAssign) tabs.push({id:'tracker',label:'Task Tracker'});
+  if(sess.role==='admin') tabs.push({id:'members',label:'Team'});
+  if(sess.role==='admin') tabs.push({id:'settings',label:'Settings'});
+
+  $('tabs-nav').innerHTML=tabs.map((t,i)=>`<button class="tnav${i===0?' on':''}" id="tnav-${t.id}" onclick="setTab('${t.id}')">${t.label}</button>`).join('');
+  $('pages').innerHTML=tabs.map((t,i)=>`<div class="page${i===0?' on':''}" id="page-${t.id}"></div>`).join('');
+
+  if(sess.canAssign) renderAssign();
+  else renderMyTasks();
+}
+
+window.setTab=function(id){
+  document.querySelectorAll('.tnav').forEach(e=>e.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('on'));
+  $('tnav-'+id)?.classList.add('on');$('page-'+id)?.classList.add('on');
+  if(id==='assign') renderAssign();
+  if(id==='mytasks') renderMyTasks();
+  if(id==='tracker') renderTracker();
+  if(id==='members') renderMembers();
+  if(id==='settings') renderSettings();
+};
+
+// ════════════════════════════
+//  ASSIGN TASK (assigners only)
+// ════════════════════════════
+let selMid=null;
+function renderAssign(){
+  const el=$('page-assign');if(!el)return;
+  const assignable=allMembers.filter(m=>m.id!==sess.uid);
+  el.innerHTML=`
+  <div style="max-width:700px">
+    <h2 style="font-size:20px;font-weight:600;margin-bottom:4px">Assign a Task</h2>
+    <p class="mu sz12 mb20" style="letter-spacing:.1px">Select a team member and fill in the task details</p>
+    <div class="card">
+      <div class="col mb18">
+        <label class="fl">Assign to</label>
+        <div class="person-grid" id="pgrid">
+          ${assignable.length?assignable.map(m=>`
+          <div class="pb" id="pb-${m.id}" onclick="selP('${m.id}')">
+            <div class="pav">${ini(m.name)}</div>
+            <div class="pnm">${esc(m.name.split(' ')[0])}</div>
+            <div class="prl">${m.phone?'📱 saved':'⚠️ no phone'}</div>
+          </div>`).join(''):`<p class="mu sz12">No team members. Add them in the Team tab.</p>`}
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="col mb12"><label class="fl">Task title *</label>
+        <input class="inp" id="t-title" placeholder="e.g. File GST returns for Client ABC">
+      </div>
+      <div class="col mb14"><label class="fl">Description / Instructions</label>
+        <textarea class="inp" id="t-desc" placeholder="Additional details, documents needed, reference numbers..."></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px">
+        <div class="col"><label class="fl">Due date</label><input class="inp" id="t-due" type="date"></div>
+        <div class="col"><label class="fl">Due time</label><input class="inp" id="t-time" type="time"></div>
+        <div class="col"><label class="fl">Priority</label>
+          <select class="sel" id="t-pri"><option>High</option><option selected>Medium</option><option>Low</option></select>
+        </div>
+      </div>
+      <div id="assign-err" class="err mb12"></div>
+      <button class="btn btn-gold" style="width:100%;padding:13px;font-size:14px;letter-spacing:.1px" onclick="assignTask()">Assign Task & Notify on WhatsApp →</button>
+    </div>
+  </div>`;
+  selMid=null;
+  const di=$('t-due');if(di)di.value=td();
+}
+
+window.selP=function(id){
+  selMid=id;
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('sel'));
+  $('pb-'+id)?.classList.add('sel');
+};
+
+window.assignTask=async function(){
+  const title=$('t-title')?.value.trim();
+  const desc=$('t-desc')?.value.trim();
+  const due=$('t-due')?.value;
+  const time=$('t-time')?.value;
+  const pri=$('t-pri')?.value;
+  const e=$('assign-err');
+  if(!selMid){e.textContent='Please select a team member first';e.classList.add('on');return;}
+  if(!title){e.textContent='Task title is required';e.classList.add('on');return;}
+  e.classList.remove('on');
+  const member=allMembers.find(m=>m.id===selMid);if(!member)return;
+  const task={
+    id:'t'+Date.now(),title,desc:desc||'',
+    due:due||td(),time:time||'',priority:pri||'Medium',
+    status:'Pending',
+    assignedTo:member.id,assignedToName:member.name,
+    assignedBy:sess.uid,assignedByName:sess.name,
+    createdAt:new Date().toISOString()
+  };
+  const msg=buildMsg(task,member);
+  task.waMsg=msg;
+  await setDoc(doc(db,'kra_tasks',task.id),task);
+  startCountdown(member,msg);
+};
+
+function buildMsg(task,member){
+  const dueStr=fmtD(task.due);
+  const timeStr=task.time?` at ${task.time}`:'';
+  const priEmoji=task.priority==='High'?'🔴':task.priority==='Medium'?'🟡':'🟢';
+  return `Dear ${member.name},\n\nYou have been assigned a new task:\n\n*${task.title}*${task.desc?`\n\n${task.desc}`:''}\n\nDue: ${dueStr}${timeStr}\nPriority: ${priEmoji} ${task.priority}\nAssigned by: ${task.assignedByName}\n\nKindly acknowledge receipt.\n\n— Krishna R & Associates`;
+}
+
+// ── COUNTDOWN ──
+function startCountdown(member,msg){
+  $('cnt-title').textContent=`Notifying ${member.name}`;
+  $('cnt-to').textContent=`${member.phone?'+'+member.phone:'⚠️ No phone number saved'}`;
+  $('cnt-preview').textContent=msg;
+  $('cnt-modal').classList.add('on');
+  let s=3;
+  $('cnt-num').textContent=s;
+  $('cnt-ring').style.strokeDashoffset='0';
+  pendingWA={member,msg};
+  cntTimer=setInterval(()=>{
+    s--;
+    $('cnt-num').textContent=s;
+    $('cnt-ring').style.strokeDashoffset=String(226.2*(1-s/3));
+    if(s<=0){clearInterval(cntTimer);cntTimer=null;$('cnt-modal').classList.remove('on');fireWA();}
+  },1000);
+}
+
+function fireWA(){
+  if(!pendingWA)return;
+  const{member,msg}=pendingWA;
+  const phone=(member.phone||'').replace(/\D/g,'');
+  if(phone)window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,'_blank');
+  else alert(`No phone for ${member.name}. Task saved but WhatsApp not sent.`);
+  pendingWA=null;
+  renderAssign();
+  $('t-title').value='';
+}
+
+window.cancelSend=function(){
+  if(cntTimer){clearInterval(cntTimer);cntTimer=null;}
+  $('cnt-modal').classList.remove('on');pendingWA=null;
+  alert('Task was saved. WhatsApp was not sent.');
+  renderAssign();
+};
+
+// ════════════════════════════
+//  MY TASKS (all users)
+// ════════════════════════════
+async function renderMyTasks(){
+  const el=$('page-mytasks');if(!el)return;
+  el.innerHTML='<div class="empty">Loading your tasks...</div>';
+  try{
+    const snap=await getDocs(collection(db,'kra_tasks'));
+    let tasks=[];
+    snap.forEach(d=>{const t=d.data();if(t.assignedTo===sess.uid)tasks.push(t);});
+    tasks.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    const pending=tasks.filter(t=>t.status!=='Done');
+    const done=tasks.filter(t=>t.status==='Done');
+    el.innerHTML=`
+    <h2 style="font-size:20px;font-weight:600;margin-bottom:4px">My Tasks</h2>
+    <p class="mu sz12 mb20">Tasks assigned to you — only you can see these</p>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-l">Total</div><div class="stat-v">${tasks.length}</div></div>
+      <div class="stat"><div class="stat-l">Pending</div><div class="stat-v" style="color:var(--amb)">${pending.length}</div></div>
+      <div class="stat"><div class="stat-l">Done</div><div class="stat-v" style="color:var(--grn)">${done.length}</div></div>
+    </div>
+    ${pending.length?`<div class="fl mb12">Pending</div>${pending.map(t=>myTaskCard(t)).join('')}`:''}
+    ${done.length?`<div class="fl mb12 mt12">Completed</div>${done.map(t=>myTaskCard(t)).join('')}`:''}
+    ${!tasks.length?'<div class="empty">No tasks assigned to you yet.</div>':''}`;
+  }catch(e){el.innerHTML=`<div class="empty">Error: ${e.message}</div>`;}
+}
+
+function myTaskCard(t){
+  const isOv=t.due&&t.status!=='Done'&&new Date(t.due+'T23:59:59')<new Date();
+  const effSta=isOv&&t.status!=='Done'?'Overdue':t.status;
+  return `<div class="my-task-card${t.status==='Done'?' done-card':''}">
+    <div class="mtc-header">
+      <div>
+        <div class="mtc-title">${esc(t.title)}</div>
+        <div class="mtc-from">From: ${esc(t.assignedByName)}</div>
+      </div>
+      <div class="row" style="gap:6px;flex-shrink:0">
+        <span class="pri ${priCls[t.priority]||'pri-m'}">${t.priority}</span>
+        <span class="sta ${staCls[effSta]||'sta-p'}">${effSta}</span>
+      </div>
+    </div>
+    ${t.desc?`<div class="mtc-desc">${esc(t.desc)}</div>`:''}
+    <div class="mtc-meta">
+      ${t.due?`<span class="task-due${isOv?' ov':''}">📅 Due: ${fmtD(t.due)}${t.time?' '+t.time:''}</span>`:''}
+      ${t.status!=='Done'?`
+      <div class="row" style="gap:6px;margin-left:auto">
+        <button class="btn btn-sm" style="border-color:var(--amb-l);color:var(--amb)" onclick="window.updSta('${t.id}','In Progress','mytasks')">Mark In Progress</button>
+        <button class="btn btn-sm btn-gold" onclick="window.updSta('${t.id}','Done','mytasks')">Mark Done ✓</button>
+      </div>`:`<span style="font-size:11px;color:var(--grn);margin-left:auto">✓ Completed</span>`}
+    </div>
+  </div>`;
+}
+
+window.updSta=async function(tid,status,ctx){
+  await setDoc(doc(db,'kra_tasks',tid),{status},{merge:true});
+  if(ctx==='mytasks')renderMyTasks();
+  else renderTracker();
+};
+
+// ════════════════════════════
+//  TASK TRACKER (assigners only)
+// ════════════════════════════
+let trkFilter='all';
+async function renderTracker(){
+  const el=$('page-tracker');if(!el)return;
+  el.innerHTML='<div class="empty">Loading...</div>';
+  try{
+    const snap=await getDocs(collection(db,'kra_tasks'));
+    let tasks=[];snap.forEach(d=>tasks.push(d.data()));
+    tasks.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    // Only show tasks assigned BY this user (unless admin sees all)
+    if(sess.role!=='admin') tasks=tasks.filter(t=>t.assignedBy===sess.uid);
+    const pending=tasks.filter(t=>t.status==='Pending'||t.status==='In Progress');
+    const done=tasks.filter(t=>t.status==='Done');
+    let filtered=tasks;
+    if(trkFilter==='pending') filtered=pending;
+    if(trkFilter==='done') filtered=done;
+    el.innerHTML=`
+    <div class="row mb20" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:2px">Task Tracker</h2>
+        <p class="mu sz12">${sess.role==='admin'?'All tasks across the firm':'Tasks you have assigned'}</p>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-l">Total assigned</div><div class="stat-v">${tasks.length}</div></div>
+      <div class="stat"><div class="stat-l">Pending</div><div class="stat-v" style="color:var(--amb)">${pending.length}</div></div>
+      <div class="stat"><div class="stat-l">Done</div><div class="stat-v" style="color:var(--grn)">${done.length}</div></div>
+      <div class="stat"><div class="stat-l">Completion</div><div class="stat-v" style="color:var(--gold)">${tasks.length?Math.round(done.length/tasks.length*100):0}%</div></div>
+    </div>
+    <div class="filter-pills">
+      <div class="fp${trkFilter==='all'?' on':''}" onclick="window.setTF('all')">All</div>
+      <div class="fp${trkFilter==='pending'?' on':''}" onclick="window.setTF('pending')">Pending / In Progress</div>
+      <div class="fp${trkFilter==='done'?' on':''}" onclick="window.setTF('done')">Completed</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Task</th><th>Assigned To</th><th>Due</th><th>Priority</th><th>Status</th><th>Assigned</th><th></th></tr></thead>
+        <tbody>${filtered.length?filtered.map(t=>{
+          const isOv=t.due&&t.status!=='Done'&&new Date(t.due+'T23:59:59')<new Date();
+          const effSta=isOv&&t.status!=='Done'?'Overdue':t.status;
+          return`<tr>
+            <td><div style="font-weight:600;font-size:13px">${esc(t.title)}</div>${t.desc?`<div class="mu" style="font-size:11px;margin-top:2px">${esc(t.desc.slice(0,55))}${t.desc.length>55?'...':''}</div>`:''}</td>
+            <td><div class="row" style="gap:6px"><div class="av" style="width:24px;height:24px;font-size:10px">${ini(t.assignedToName)}</div><span style="font-weight:500">${esc(t.assignedToName)}</span></div></td>
+            <td class="mu" style="font-family:'DM Mono',monospace;font-size:12px${isOv?' ;color:var(--red)':''}">${t.due||'—'}${t.time?' '+t.time:''}</td>
+            <td><span class="pri ${priCls[t.priority]||'pri-m'}">${t.priority}</span></td>
+            <td><span class="sta ${staCls[effSta]||'sta-p'}">${effSta}</span></td>
+            <td class="mu" style="font-size:11px;font-family:'DM Mono',monospace">${fmtDT(t.createdAt)}</td>
+            <td><button class="btn btn-sm btn-r" onclick="window.delTask('${t.id}')">Delete</button></td>
+          </tr>`;}).join(''):`<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--mu)">No tasks found</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+  }catch(e){el.innerHTML=`<div class="empty">Error: ${e.message}</div>`;}
+}
+window.setTF=f=>{trkFilter=f;renderTracker();};
+window.delTask=async function(tid){
+  if(!confirm('Delete this task?'))return;
+  await deleteDoc(doc(db,'kra_tasks',tid));renderTracker();
+};
+
+// ════════════════════════════
+//  TEAM MEMBERS (admin)
+// ════════════════════════════
+async function renderMembers(){
+  const el=$('page-members');if(!el)return;
+  el.innerHTML='<div class="empty">Loading...</div>';
+  const snap=await getDocs(collection(db,'kra_members'));
+  const members=[];snap.forEach(d=>members.push({...d.data(),id:d.id}));
+  members.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const assigners=members.filter(m=>m.role==='assigner');
+  const staff=members.filter(m=>m.role==='staff');
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px">
+    <div class="card">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:6px">Add team member</h3>
+      <p class="mu sz12 mb16">Partners/Managers can assign tasks. Staff can only see their own tasks.</p>
+      <div class="col mb10"><label class="fl">Full name *</label><input class="inp" id="mn" placeholder="e.g. Priya Sharma"></div>
+      <div class="col mb10"><label class="fl">WhatsApp number (with country code) *</label><input class="inp" id="mph" placeholder="919876543210"></div>
+      <div class="col mb10"><label class="fl">PIN (for login) *</label><input class="inp" id="mpin" type="password" maxlength="6" placeholder="4–6 digit PIN"></div>
+      <div class="col mb16"><label class="fl">Role</label>
+        <select class="sel" id="mrol">
+          <option value="staff">Staff (can only see own tasks)</option>
+          <option value="assigner">Partner / Manager (can assign tasks)</option>
+        </select>
+      </div>
+      <div id="madd-err" class="err mb8"></div>
+      <button class="btn btn-gold" onclick="window.addMember()">Add Member</button>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">Team <span class="mu" style="font-weight:400">(${members.length})</span></h3>
+      ${assigners.length?`<div class="fl mb8">Partners / Managers (${assigners.length}/4)</div>${assigners.map(m=>memberRow(m)).join('')}`:``}
+      ${staff.length?`<div class="fl mb8 mt12">Staff (${staff.length})</div>${staff.map(m=>memberRow(m)).join('')}`:''}
+      ${!members.length?'<div class="empty" style="padding:20px">No members yet</div>':''}
+    </div>
+  </div>`;
+}
+function memberRow(m){
+  return`<div class="row mb8" style="background:var(--surf2);padding:10px 12px;border-radius:var(--rad);gap:8px;border:1px solid var(--bdr)">
+    <div class="av av-lg">${ini(m.name)}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:600">${esc(m.name)}</div>
+      <div class="mu sz11">${m.phone?'📱 '+m.phone:'⚠️ no phone'}</div>
+    </div>
+    <span class="role-badge" style="${m.role==='assigner'?'':'background:var(--surf3);color:var(--mu);border-color:var(--bdr)'}">${m.role==='assigner'?'Partner':'Staff'}</span>
+    <button class="btn btn-sm btn-r" onclick="window.removeMember('${m.id}')">×</button>
+  </div>`;
+}
+window.addMember=async function(){
+  const n=$('mn')?.value.trim(),ph=$('mph')?.value.trim(),pin=$('mpin')?.value.trim(),rol=$('mrol')?.value;
+  const e=$('madd-err');
+  if(!n||!pin){e.textContent='Name and PIN are required';e.classList.add('on');return;}
+  const assigners=allMembers.filter(m=>m.role==='assigner');
+  if(rol==='assigner'&&assigners.length>=4){e.textContent='Maximum 4 partners/managers allowed';e.classList.add('on');return;}
+  e.classList.remove('on');
+  const id='m'+Date.now();
+  await setDoc(doc(db,'kra_members',id),{name:n,phone:ph||'',pin,role:rol||'staff',id,createdAt:serverTimestamp()});
+  await loadMembers();
+  ['mn','mph','mpin'].forEach(x=>{const el=$(x);if(el)el.value='';});
+  renderMembers();
+};
+window.removeMember=async function(id){
+  if(!confirm('Remove this team member?'))return;
+  await deleteDoc(doc(db,'kra_members',id));
+  await loadMembers();renderMembers();
+};
+
+// ── SETTINGS (admin) ──
+async function renderSettings(){
+  const el=$('page-settings');if(!el)return;
+  el.innerHTML='<div class="empty">Loading...</div>';
+  const s=await getDoc(doc(db,'kra_config','app'));
+  const cfg=s.exists()?s.data():{};
+  el.innerHTML=`
+  <div style="max-width:500px">
+    <div class="card mb16">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">Change admin PIN</h3>
+      <div class="col mb12"><label class="fl">New admin PIN</label><input class="inp" id="ap-new" type="password" placeholder="New PIN"></div>
+      <div id="ap-ok" class="ok mb8"></div>
+      <button class="btn btn-gold" onclick="window.changeAdminPin()">Update PIN</button>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">WhatsApp message template</h3>
+      <p class="mu sz12 mb12">Default message sent when assigning tasks. Variables: {name} {title} {desc} {due} {priority} {assignedBy}</p>
+      <textarea class="inp mb10" id="wa-tmpl" rows="7" style="font-family:'DM Mono',monospace;font-size:12px">${esc(cfg.waTemplate||`Dear {name},\n\nYou have been assigned a new task:\n\n*{title}*\n\n{desc}\n\nDue: {due}\nPriority: {priority}\nAssigned by: {assignedBy}\n\nKindly acknowledge receipt.\n\n— Krishna R & Associates`)}</textarea>
+      <div id="wt-ok" class="ok mb8"></div>
+      <button class="btn btn-gold" onclick="window.saveWAT()">Save template</button>
+    </div>
+  </div>`;
+}
+window.changeAdminPin=async function(){
+  const p=$('ap-new')?.value.trim();if(!p)return;
+  await setDoc(doc(db,'kra_config','app'),{adminPin:p},{merge:true});
+  const m=$('ap-ok');if(m){m.textContent='PIN updated!';m.classList.add('on');setTimeout(()=>m.classList.remove('on'),2500);}
+  $('ap-new').value='';
+};
+window.saveWAT=async function(){
+  const t=$('wa-tmpl')?.value;
+  await setDoc(doc(db,'kra_config','app'),{waTemplate:t},{merge:true});
+  const m=$('wt-ok');if(m){m.textContent='Template saved!';m.classList.add('on');setTimeout(()=>m.classList.remove('on'),2500);}
+};
+
+boot();
+</script>
+</body>
+</html>
